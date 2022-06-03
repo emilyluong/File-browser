@@ -6,6 +6,7 @@ import javafx.event.EventHandler
 import javafx.scene.Scene
 import javafx.scene.control.*
 import javafx.scene.image.Image
+import javafx.scene.image.ImageView
 import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyEvent
 import javafx.scene.input.MouseEvent
@@ -510,10 +511,7 @@ class Main : Application() {
                         return
                     }
                 } catch (e: Exception) {
-                    val errorPopup = Alert(Alert.AlertType.ERROR)
-                    errorPopup.title = "Unable to Move File/Directory"
-                    errorPopup.headerText = "Error Encountered Moving File/Directory"
-                    errorPopup.showAndWait()
+                    print(e)
                 }
             }
         }
@@ -653,32 +651,39 @@ class Main : Application() {
             return menuBar
         }
 
+        fun setIcon(url: String): ImageView {
+            val icon = ImageView(url)
+            icon.fitHeight = 15.0
+            icon.fitWidth = 15.0
+            return icon
+        }
+
         // set up tool bar
         fun setUpToolBar(): ToolBar {
             val toolbar = ToolBar()
             // Add event handler for home
-            val home = Button("Home")
+            val home = Button("Home", setIcon("https://cdn-icons-png.flaticon.com/512/845/845022.png"))
             val homeClickHandler: EventHandler<MouseEvent> = EventHandler { homeClickHandler() }
             home.addEventFilter(MouseEvent.MOUSE_CLICKED, homeClickHandler)
 
-            val prev = Button("Prev")
+            val prev = Button("Prev", setIcon("https://cdn-icons-png.flaticon.com/512/467/467272.png"))
             val prevClickHandler: EventHandler<MouseEvent> = EventHandler { prevClickHandler() }
             prev.addEventFilter(MouseEvent.MOUSE_CLICKED, prevClickHandler)
 
-            val next = Button("Next")
+            val next = Button("Next", setIcon("https://cdn-icons-png.flaticon.com/512/467/467280.png"))
             val nextClickHandler: EventHandler<MouseEvent> = EventHandler { nextClickHandler() }
             next.addEventFilter(MouseEvent.MOUSE_CLICKED, nextClickHandler)
 
             // Add event handler for rename
-            val delete = Button("Delete")
+            val delete = Button("Delete", setIcon("https://cdn-icons-png.flaticon.com/512/3096/3096673.png"))
             delete.addEventFilter(MouseEvent.MOUSE_CLICKED, deleteClickHandler())
 
             // Add event handler for rename
-            val rename = Button("Rename")
+            val rename = Button("Rename", setIcon("https://cdn-icons-png.flaticon.com/512/5136/5136886.png"))
             rename.addEventFilter(MouseEvent.MOUSE_CLICKED, renameClickHandler())
 
             // Add event handler for move
-            val move = Button("Move")
+            val move = Button("Move", setIcon("https://cdn-icons-png.flaticon.com/512/6941/6941431.png"))
             move.addEventFilter(MouseEvent.MOUSE_CLICKED, moveClickHandler())
 
             toolbar.items.addAll(home, prev, next, delete, rename, move)
