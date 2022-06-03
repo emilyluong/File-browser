@@ -222,10 +222,14 @@ class Main : Application() {
         fun getSelectedFilePathForClickHandler(it: MouseEvent): String {
             val target = it.target.toString()
             var targetFileName: String
+
             if (target.startsWith("ListViewSkin")) {
                 targetFileName = target.substringAfter("'")
                 targetFileName = targetFileName.substringBefore("'")
             } else {
+                if (target.startsWith("ListView")) {
+                    return selectedFilePath
+                }
                 targetFileName = target.substringAfter("text=\"")
                 targetFileName = targetFileName.substringBefore("\",")
             }
