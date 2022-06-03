@@ -41,39 +41,8 @@ class Main : Application() {
         val result = textInputDialog.showAndWait()
 
         if (result.isPresent) {
-            // add extension for file rename if extension was not added by user
-            // normal file with no extension x
-            // normal file turn into hidden file no extension x
-            // normal file turn into hidden file with extension
-            // hidden file with no extension
-            // hidden file turn into normal file no extension
-            // hidden file turn into normal file with extension
             if (result.get() == "") {
                 return ""
-            }
-
-            // hidden file name with no ext renames to another name, but still hidden
-            // if file has no extension, there can be 2 ways:
-            // 1. file is hidden -> new name is hidden
-            // 2. file is hidden -> new name is not hidden
-            // 3. file is not hidden -> new name is hidden
-            // 4. file is not hidden -> new name is not hidden
-            if (file.isFile &&
-                (isHiddenFileOrDir(file.name) && countCharacter(file.name, '.') == 1 &&
-                        ((isHiddenFileOrDir(result.get()) && countCharacter(result.get(), '.') == 1)
-                                || !isHiddenFileOrDir(result.get()) && countCharacter(result.get(), '.') == 0))
-                || (!isHiddenFileOrDir(file.name) && countCharacter(file.name, '.') == 0 &&
-                        ((isHiddenFileOrDir(result.get()) && countCharacter(result.get(), '.') == 1)
-                                || !isHiddenFileOrDir(result.get()) && countCharacter(result.get(), '.') == 0))) {
-                return result.get()
-            }
-
-            if (file.isFile && (
-                        (getFileExtension(result.get()) == "" && !isHiddenFileOrDir(file.name)) ||
-                                (isHiddenFileOrDir(result.get()) && countCharacter(result.get(), '.') == 1 && !isHiddenFileOrDir(file.name)) ||
-                                (!isHiddenFileOrDir(result.get()) && getFileExtension(result.get()) == "" &&  isHiddenFileOrDir(file.name)) ||
-                                (isHiddenFileOrDir(result.get()) && countCharacter(result.get(), '.') == 1 && isHiddenFileOrDir(file.name)))) {
-                return "${result.get()}.${getFileExtension(file.toPath().toString())}"
             }
             return result.get()
         } else {
@@ -353,7 +322,6 @@ class Main : Application() {
             if (selectedFilePath != testDir.path && !isSelectedFileTheFolder(selectedFilePath, fileList)) {
                 val selectedFilePathFile = File(selectedFilePath)
                 val newFileName = promptUserFileRename(selectedFilePathFile)
-
                 if (newFileName == selectedFilePathFile.name) {
                     return
                 }
@@ -401,27 +369,27 @@ class Main : Application() {
                     currentFileList[indexOfChangedFile] = getCorrectFileOrDirName(newPathFile)
 
                     val updatedFilePath = ArrayList<File>()
-                    for (file in currentFileList) {
-                        updatedFilePath.add(File(getFilePathInCurrentDir(file)))
-
+                    for (filename in currentFileList) {
+                        // adds the new path
+                        if (filename == currentFileList[indexOfChangedFile]) {
+                            updatedFilePath.add(File(newPath))
+                        } else {
+                            updatedFilePath.add(File(getFilePathInCurrentDir(filename)))
+                        }
                     }
                     fileList = ListView(getFileList(updatedFilePath, showHiddenFiles))
                     fileList.setOnKeyPressed {keyPressFileListHandler(it)}
                     fileList.addEventHandler(MouseEvent.MOUSE_CLICKED, fileClickHandler())
                     border.left = fileList
 
-                    // if show hidden files is true, it is okay to show the hidden file. Otherwise, need to change selected file and content shown
-                    if (!showHiddenFiles && isHiddenFileOrDir(getCorrectFileOrDirName(File(selectedFilePath)))) {
-                        if (showHiddenFiles) {
-                            border.bottom = setBottomPath(newPath)
-                            selectedFilePath = newPath
-                        } else {
-                            val nonHiddenNewPath = newPath.substringBefore("/.")
-                            border.bottom = setBottomPath(nonHiddenNewPath)
-                            border.center = null
-                            selectedFilePath = nonHiddenNewPath
-                        }
+                    // if show hidden files is true, it is okay to show the hidden file. Otherwise, need to change newly named selected file and content shown
+                    if (!showHiddenFiles && isHiddenFileOrDir(getCorrectFileOrDirName(File(newPath)))) {
+                        val nonHiddenNewPath = newPath.substringBefore("/.")
+                        border.bottom = setBottomPath(nonHiddenNewPath)
+                        border.center = null
+                        selectedFilePath = nonHiddenNewPath
                     } else {
+                        setCenterContent(newPath, border)
                         border.bottom = setBottomPath(newPath)
                         selectedFilePath = newPath
                     }
