@@ -363,14 +363,7 @@ class Main : Application() {
                     val errorPopup = Alert(Alert.AlertType.ERROR)
                     errorPopup.title = "Unable to Rename File/Directory"
                     errorPopup.headerText = "Invalid File/Directory Name"
-                    errorPopup.contentText = "The name entered is invalid. The following can be the issue: \n\n" +
-                            "- Empty file/Directory name; \n" +
-                            "- File/Directory name already exists in this directory; \n" +
-                            "- File/Directory name entered contains '/'; \n" +
-                            "- Directory name entered contains a '.' in a position other than the start of the name (to indicate hidden); \n" +
-                            "- File/Directory name entered contains more than 2 '.' for hidden file; \n" +
-                            "- File/Directory name entered contains more than 1 '.' for non-hidden file. \n" +
-                            "- File/Directory name entered has '..' in the start. \n"
+                    errorPopup.contentText = "The name entered is invalid. Please enter a valid name."
                     errorPopup.showAndWait()
                     return
                 }
@@ -432,14 +425,7 @@ class Main : Application() {
                     val errorPopup = Alert(Alert.AlertType.ERROR)
                     errorPopup.title = "Unable to Rename File/Directory"
                     errorPopup.headerText = "Invalid File/Directory Name"
-                    errorPopup.contentText = "The name entered is invalid. The following can be the issue: \n\n" +
-                            "- Empty file/Directory name; \n" +
-                            "- File/Directory name already exists in this directory; \n" +
-                            "- File/Directory name entered contains '/'; \n" +
-                            "- Directory name entered contains a '.' in a position other than the start of the name (to indicate hidden); \n" +
-                            "- File/Directory name entered contains more than 2 '.' for hidden file; \n" +
-                            "- File/Directory name entered contains more than 1 '.' for non-hidden file. \n" +
-                            "- File/Directory name entered has '..' in the start. \n"
+                    errorPopup.contentText = "The name entered is invalid. Please enter a valid name."
                     errorPopup.showAndWait()
                 }
             }
