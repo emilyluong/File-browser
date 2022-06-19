@@ -473,10 +473,12 @@ class Model (private val stage: Stage) {
 
     fun selectShapeOnPos(x: Double, y: Double) {
         // gp though the shape array on the canvas and
-        //println("shape array " + shapesOnCanvas )
+        println("shape array " + shapesOnCanvas )
         //println("x " + x + " y " + y)
 
-        for (shape in shapesOnCanvas) {
+        for (i in shapesOnCanvas.size-1 downTo 0) {
+            val shape = shapesOnCanvas[i]
+            println("shapepppeeeee " + shape)
 
             if (shape is Line) {
                 // if x y coordinates in where a line is
@@ -485,9 +487,6 @@ class Model (private val stage: Stage) {
                 val endLineX = shape.endX
                 val endLineY = shape.endY
 
-                // can check if the shape is selected by comparing the length of the line
-                // to the sum of the distance of the start line coordinates to the current coordinates
-                // and the distance of the current coordinates to the end of the line coordinates
                 val lineDistance = getDistanceBetween(startLineX, startLineY, endLineX, endLineY)
                 val startLineAndCurrPosDistance = getDistanceBetween(startLineX, startLineY, x, y)
                 val currPosAndEndLineDistance = getDistanceBetween(x, y, endLineX, endLineY)
@@ -524,6 +523,11 @@ class Model (private val stage: Stage) {
                     (y >= topLeftY) && (y <= topLeftY + height)) {
                     currentSelectedShape = shape
                     if (selectedTool == "select") {
+                        println("GET SELECTED SHAPE ALL SHAPES" + shapesOnCanvas)
+                        println("GET SELECTED SHAPE SELECTED " + currentSelectedShape)
+                        println("GET SELECTED SHAPE TOOL PROPS " + selectedToolProperty)
+                        println("GET SELECTED SHAPE CURRENT SHAPE IN THIS LOOP " + shape)
+
                         setCurrentToolPropertyOfShape(shape)
                     }
                     return

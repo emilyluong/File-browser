@@ -20,6 +20,9 @@ internal class CanvasView (private val model: Model) : VBox(), IView {
     private var canvas = Canvas()
     val gc = canvas.graphicsContext2D
 
+    private enum class STATE { NONE, DRAG }
+    private var state = STATE.NONE
+
     //captures the current x, y coordinates of the mouse on the canvas
     private var prevX = 0.0
     private var prevY = 0.0
@@ -153,11 +156,11 @@ internal class CanvasView (private val model: Model) : VBox(), IView {
 
         when(shape) {
             is Line -> {
-                model.addLine(model.getLineColour(), model.getLineThickness(), model.getLineStyle(), shape.startX, shape.startY, shape.endX, shape.endY)
+                model.addLine(shape.stroke, shape.strokeWidth, shape.strokeDashArray, shape.startX, shape.startY, shape.endX, shape.endY)
             } is Circle -> {
-                model.addCircle(model.getLineColour(), model.getFillColour(), model.getLineThickness(), model.getLineStyle(), shape.centerX, shape.centerY, shape.radius)
+                model.addCircle(shape.stroke, shape.fill, shape.strokeWidth, shape.strokeDashArray, shape.centerX, shape.centerY, shape.radius)
             } is Rectangle -> {
-                model.addRectangle(model.getLineColour(), model.getFillColour(), model.getLineThickness(), model.getLineStyle(), shape.x, shape.y, shape.width, shape.height)
+                model.addRectangle(shape.stroke, shape.fill, shape.strokeWidth, shape.strokeDashArray, shape.x, shape.y, shape.width, shape.height)
             }
         }
 
@@ -219,7 +222,7 @@ internal class CanvasView (private val model: Model) : VBox(), IView {
         // handles when the mouse is clicked for select, erase tool
         canvas.setOnMouseClicked {
 
-            println("x " + it.x + " y " + it.y)
+            println("ON MOUSE CLICK START TOOL PROP " + model.shapesOnCanvas)
             if (model.selectedTool == "select") {
                 println("inside select")
                 val prevSelectedShape = model.currentSelectedShape
@@ -264,52 +267,89 @@ internal class CanvasView (private val model: Model) : VBox(), IView {
                     model.currentSelectedShape = null
                 }
             }
+            println("ON MOUSE CLICK END TOOL PROP " + model.shapesOnCanvas)
+
         }
 
         // handles when mouse is released when line tool is used
         canvas.setOnMouseReleased {
+            println("ON MOUSE RELEASE START TOOL PROP " + model.shapesOnCanvas)
 
             // add shape to list of shapes in the model
-            when (model.selectedTool) {
-                "line" -> {
-                    model.addLine(model.getLineColour(), model.getLineThickness(), model.getLineStyle(), startX, startY, prevX, prevY)
-                    gc.clearRect(0.0, 0.0, canvas.width, canvas.height)
-                    refreshCanvas()
-                }
-                "circle" -> {
-                    // check ensures that it doesnt add neg radius to array (when mouse is dragged other than top left to bottom right)
-                    val radius = sqrt((prevX - startX).pow(2.0) + (prevY - startY).pow(2.0))
-                    val centerX = startX
-                    val centerY = startY
-
-                    println("startx in release " + startX + " startY " + startY + " radius " + radius)
-
-                    model.addCircle(model.getLineColour(), model.getFillColour(), model.getLineThickness(), model.getLineStyle(), centerX, centerY, radius)
-                    gc.clearRect(0.0, 0.0, canvas.width, canvas.height)
-                    refreshCanvas()
-                }
-                "rectangle" -> {
-                    println("inside rect")
-                    // check ensures that it doesnt add neg radius to array (when mouse is dragged other than top left to bottom right)
-                    if ((prevX - startX) > 0 && (prevY - startY) > 0) {
-                        val width = prevX - startX
-                        val height = prevY - startY
-                        model.addRectangle(model.getLineColour(), model.getFillColour(), model.getLineThickness(), model.getLineStyle(), startX, startY, width, height)
+            if (state == STATE.DRAG) {
+                when (model.selectedTool) {
+                    "line" -> {
+                        model.addLine(
+                            model.getLineColour(),
+                            model.getLineThickness(),
+                            model.getLineStyle(),
+                            startX,
+                            startY,
+                            prevX,
+                            prevY
+                        )
                         gc.clearRect(0.0, 0.0, canvas.width, canvas.height)
                         refreshCanvas()
                     }
+                    "circle" -> {
+                        // check ensures that it doesnt add neg radius to array (when mouse is dragged other than top left to bottom right)
+                        val radius = sqrt((prevX - startX).pow(2.0) + (prevY - startY).pow(2.0))
+                        val centerX = startX
+                        val centerY = startY
+
+                        println("startx in release " + startX + " startY " + startY + " radius " + radius)
+
+                        model.addCircle(
+                            model.getLineColour(),
+                            model.getFillColour(),
+                            model.getLineThickness(),
+                            model.getLineStyle(),
+                            centerX,
+                            centerY,
+                            radius
+                        )
+                        gc.clearRect(0.0, 0.0, canvas.width, canvas.height)
+                        refreshCanvas()
+                    }
+                    "rectangle" -> {
+                        println("inside rect")
+                        // check ensures that it doesnt add neg radius to array (when mouse is dragged other than top left to bottom right)
+                        if ((prevX - startX) > 0 && (prevY - startY) > 0) {
+                            val width = prevX - startX
+                            val height = prevY - startY
+                            model.addRectangle(
+                                model.getLineColour(),
+                                model.getFillColour(),
+                                model.getLineThickness(),
+                                model.getLineStyle(),
+                                startX,
+                                startY,
+                                width,
+                                height
+                            )
+                            gc.clearRect(0.0, 0.0, canvas.width, canvas.height)
+                            refreshCanvas()
+                        }
+                    }
                 }
+                state = STATE.NONE
             }
+            println("ON MOUSE RELEASE END TOOL PROP " + model.shapesOnCanvas)
         }
 
         // get the start coordinates on the canvas when the mouse is pressed
         canvas.setOnMousePressed {
+            println("ON MOUSE PRESSED START TOOL PROP " + model.shapesOnCanvas)
+
             startX = it.x
             startY = it.y
             println("start x and y " + startX + " " + startY)
+            println("ON MOUSE PRESSED END TOOL PROP " + model.shapesOnCanvas)
+
         }
 
         canvas.setOnMouseDragged {
+            println("ON MOUSE DRAG START TOOL PROP " + model.shapesOnCanvas)
 
             val lineColour = model.getLineColour()
             val fillColor = model.getFillColour()
@@ -332,21 +372,26 @@ internal class CanvasView (private val model: Model) : VBox(), IView {
                     "line" -> {
                         refreshCanvas()
                         drawLine(null, lineColour, lineThickness, lineStyle, startX, startY, prevX, prevY)
+                        state = STATE.DRAG
                     }
                     "circle" -> {
                         val radius = sqrt((prevX - startX).pow(2.0) + (prevY - startY).pow(2.0))
 
                         refreshCanvas()
                         drawCircle(null, lineColour, fillColor, lineThickness, lineStyle, startX - radius, startY - radius, radius * 2)
+                        state = STATE.DRAG
                     }
                     "rectangle" -> {
                         val width = prevX-startX
                         val height = prevY-startY
                         refreshCanvas()
                         drawRectangle(null, lineColour, fillColor, lineThickness, lineStyle, startX, startY, width, height)
+                        state = STATE.DRAG
                     }
                 }
             }
+            println("ON MOUSE DRAG END TOOL PROP " + model.shapesOnCanvas)
+
         }
     }
 
