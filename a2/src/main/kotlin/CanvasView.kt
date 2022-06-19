@@ -248,6 +248,7 @@ internal class CanvasView (private val model: Model) : VBox(), IView {
                 }
                 gc.clearRect(0.0, 0.0, canvas.width, canvas.height)
                 refreshCanvas()
+                model.currentSelectedShape = null
             } else if (model.selectedTool == "fill") {
                 val selectedShape = model.getSelectedShape(it.x, it.y)
 
@@ -260,6 +261,7 @@ internal class CanvasView (private val model: Model) : VBox(), IView {
                     model.addShape(selectedShape)
                     gc.clearRect(0.0, 0.0, canvas.width, canvas.height)
                     refreshCanvas()
+                    model.currentSelectedShape = null
                 }
             }
         }
