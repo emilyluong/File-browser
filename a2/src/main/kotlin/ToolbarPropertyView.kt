@@ -1,11 +1,9 @@
-import javafx.geometry.Insets
 import javafx.geometry.Pos
 import javafx.scene.control.Button
 import javafx.scene.control.ColorPicker
 import javafx.scene.control.Label
 import javafx.scene.layout.*
 import javafx.scene.paint.Color
-import javafx.scene.paint.Paint
 import javafx.scene.shape.Line
 import javafx.scene.shape.Rectangle
 
@@ -27,7 +25,6 @@ internal class ToolbarPropertyView (private val model: Model) : VBox(), IView {
         // 2. tool is erase
         toolbarOptions.isDisable = (model.selectedTool == "select" && model.currentSelectedShape == null || model.selectedTool == "erase")
 
-        println("is toolbar options disabled " + toolbarOptions.isDisable + " " + model.selectedTool + " " + model.currentSelectedShape)
         if (model.selectedTool == "select" && model.currentSelectedShape != null) {
             // updates the value shown on the line colour picker
             val lineColourIndex = childrenMapIndex["toolOptionRowLineColour"]

@@ -1,21 +1,17 @@
 import javafx.geometry.Pos
 import javafx.scene.control.Button
 import javafx.scene.control.Label
-import javafx.scene.control.TextArea
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import javafx.scene.layout.HBox
 import javafx.scene.layout.VBox
 import javafx.scene.paint.Color
-import javafx.scene.shape.SVGPath
 
 internal class ToolbarView (private val model: Model) : VBox(), IView {
     private val toolbar = VBox(5.0)
 
-    // When notified by the model that things have changed,
-    // update to display the new value
-    override fun updateView() {
 
+    override fun updateView() {
 
     }
 

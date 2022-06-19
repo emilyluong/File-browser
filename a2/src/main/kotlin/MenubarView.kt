@@ -1,16 +1,6 @@
 import javafx.scene.control.*
-import javafx.scene.input.Clipboard
-import javafx.scene.input.ClipboardContent
 import javafx.scene.input.DataFormat
 import javafx.scene.layout.VBox
-import javafx.stage.FileChooser
-import jdk.jfr.consumer.EventStream.openFile
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import java.io.IOException
-import javax.print.DocFlavor.STRING
-
 
 internal class MenubarView (private val model: Model) : VBox(), IView {
 
@@ -84,7 +74,6 @@ internal class MenubarView (private val model: Model) : VBox(), IView {
     // When notified by the model that things have changed,
     // update to display the new value
     override fun updateView() {
-        println("MenubarView: updateView")
         val file: Menu
         val edit: Menu
         val help: Menu

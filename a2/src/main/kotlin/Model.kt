@@ -3,7 +3,6 @@ import javafx.scene.canvas.Canvas
 import javafx.scene.control.Alert
 import javafx.scene.control.ButtonBar
 import javafx.scene.control.ButtonType
-import javafx.scene.image.WritableImage
 import javafx.scene.paint.Color
 import javafx.scene.paint.Paint
 import javafx.scene.shape.Circle
@@ -13,16 +12,12 @@ import javafx.scene.shape.Shape
 import javafx.stage.FileChooser
 import javafx.stage.Stage
 import java.io.IOException
-import javax.imageio.ImageIO
 import kotlin.math.hypot
 import kotlin.math.pow
 import kotlin.math.sqrt
-import javafx.embed.swing.SwingFXUtils
-import javafx.scene.image.Image
 import javafx.scene.input.Clipboard
 import javafx.scene.input.ClipboardContent
 import javafx.scene.input.DataFormat
-import netscape.javascript.JSObject
 import kotlinx.serialization.*
 import kotlinx.serialization.json.*
 import java.io.FileWriter
@@ -35,6 +30,7 @@ class Model (private val stage: Stage) {
 
     // all views of this model
     private val views: ArrayList<IView> = ArrayList()
+    var initialCanvasState = ArrayList<Shape>()
 
     var selectedTool = "select"
     var selectedToolProperty = HashMap<String, String>()
@@ -42,11 +38,11 @@ class Model (private val stage: Stage) {
     var currentSelectedShape: Shape? = null
     var canvas = Canvas()
     var gc = canvas.graphicsContext2D
-    var isCanvasSaved = false
     var fileToLoad: String? = null
     var isPrevToolSelect = false
     var editAction: String? = null
     val clipboard = Clipboard.getSystemClipboard()
+    var pastedShape: Shape? = null
 
     init {
         selectedToolProperty["lineColour"] = "#000000"
@@ -72,32 +68,25 @@ class Model (private val stage: Stage) {
     }
 
     fun isCanvasDirty(): Boolean {
-        return shapesOnCanvas.size != 0
+        return shapesOnCanvas != initialCanvasState
     }
 
     fun promptToSave() {
-        if (isCanvasDirty()) {
-            val saveBtn = ButtonType("Save", ButtonBar.ButtonData.OK_DONE)
-            val noSaveBtn = ButtonType("Don't Save", ButtonBar.ButtonData.OTHER)
+        val saveBtn = ButtonType("Save", ButtonBar.ButtonData.OK_DONE)
+        val noSaveBtn = ButtonType("Don't Save", ButtonBar.ButtonData.OTHER)
 
-            val savePopup = Alert(Alert.AlertType.WARNING, "If you would like to save these changes, click Save.", noSaveBtn, saveBtn)
-            savePopup.title = "Save Changes"
-            savePopup.headerText = "You have unsaved changes!"
-            val result = savePopup.showAndWait()
+        val savePopup = Alert(Alert.AlertType.WARNING, "If you would like to save these changes, click Save.", noSaveBtn, saveBtn)
+        savePopup.title = "Save Changes"
+        savePopup.headerText = "You have unsaved changes!"
+        val result = savePopup.showAndWait()
 
-            println("result " + result)
-
-            if (result.get().text == "Save") {
-                saveFile()
-                isCanvasSaved = true
-            } else if (result.get().text == "Don't Save") {
-                isCanvasSaved = false
-            }
+        if (result.get().text == "Save") {
+            saveFile()
         }
     }
 
     fun newFile() {
-        if (!isCanvasSaved) {
+        if (isCanvasDirty()) {
             promptToSave()
         }
 
@@ -112,6 +101,7 @@ class Model (private val stage: Stage) {
         selectedToolProperty = HashMap()
         shapesOnCanvas = ArrayList()
         currentSelectedShape = null
+        initialCanvasState = ArrayList()
 
         selectedToolProperty["lineColour"] = "#000000"
         selectedToolProperty["fillColour"] = "#FFFFFF"
@@ -120,16 +110,14 @@ class Model (private val stage: Stage) {
     }
 
     fun loadFile() {
-        if (!isCanvasSaved) {
+        if (isCanvasDirty()) {
             promptToSave()
         }
 
         val fileChooser = FileChooser()
         val file = fileChooser.showOpenDialog(stage)
-        println("file " + file + " " + file.extension)
         if (file != null) {
             fileToLoad = Files.readString(file.toPath(), StandardCharsets.US_ASCII)
-            println("file to load " + fileToLoad)
             notifyObservers()
         }
     }
@@ -144,10 +132,10 @@ class Model (private val stage: Stage) {
                 "line" -> {
                     addLine(Color.web(shapeData.lineColor), shapeData.thickness, shapeData.style, shapeData.startX, shapeData.startY, shapeData.endX, shapeData.endY)
                 } "circle" -> {
-                addCircle(Color.web(shapeData.lineColor), Color.web(shapeData.fillColor), shapeData.thickness, shapeData.style, shapeData.centerX, shapeData.centerY, shapeData.radius)
-            } "rectangle" -> {
-                addRectangle(Color.web(shapeData.lineColor), Color.web(shapeData.fillColor), shapeData.thickness, shapeData.style, shapeData.x, shapeData.y, shapeData.width, shapeData.height)
-            }
+                    addCircle(Color.web(shapeData.lineColor), Color.web(shapeData.fillColor), shapeData.thickness, shapeData.style, shapeData.centerX, shapeData.centerY, shapeData.radius)
+                } "rectangle" -> {
+                    addRectangle(Color.web(shapeData.lineColor), Color.web(shapeData.fillColor), shapeData.thickness, shapeData.style, shapeData.x, shapeData.y, shapeData.width, shapeData.height)
+                }
             }
         }
     }
@@ -233,7 +221,7 @@ class Model (private val stage: Stage) {
             try {
                 val jsonString = Json.encodeToString(jsonShapeList)
                 PrintWriter(FileWriter(file)).use { it.write(jsonString) }
-                isCanvasSaved = true
+                initialCanvasState = shapesOnCanvas.clone() as ArrayList<Shape>
             } catch (e: IOException) {
                 e.printStackTrace()
             }
@@ -241,7 +229,7 @@ class Model (private val stage: Stage) {
     }
 
     fun exit() {
-        if (!isCanvasSaved) {
+        if (isCanvasDirty()) {
             promptToSave()
         }
         Platform.exit()
@@ -281,12 +269,24 @@ class Model (private val stage: Stage) {
 
             when(shapeData.shapeType) {
                 "line" -> {
-                    addLine(Color.web(shapeData.lineColor), shapeData.thickness, shapeData.style, shapeData.startX + 20, shapeData.startY + 20, shapeData.endX + 20, shapeData.endY + 20)
+                    pastedShape = if (pastedShape != null && pastedShape is Line) {
+                        addLine(Color.web(shapeData.lineColor), shapeData.thickness, shapeData.style, (pastedShape as Line).startX + 20, (pastedShape as Line).startY + 20, (pastedShape as Line).endX + 20, (pastedShape as Line).endY + 20)
+                    } else {
+                        addLine(Color.web(shapeData.lineColor), shapeData.thickness, shapeData.style, shapeData.startX + 20, shapeData.startY + 20, shapeData.endX + 20, shapeData.endY + 20)
+                    }
                 } "circle" -> {
-                addCircle(Color.web(shapeData.lineColor), Color.web(shapeData.fillColor), shapeData.thickness, shapeData.style, shapeData.centerX + 20, shapeData.centerY + 20, shapeData.radius)
-            } "rectangle" -> {
-                addRectangle(Color.web(shapeData.lineColor), Color.web(shapeData.fillColor), shapeData.thickness, shapeData.style, shapeData.x + 20, shapeData.y + 20, shapeData.width, shapeData.height)
-            }
+                    pastedShape = if (pastedShape != null && pastedShape is Circle) {
+                        addCircle(Color.web(shapeData.lineColor), Color.web(shapeData.fillColor), shapeData.thickness, shapeData.style, (pastedShape as Circle).centerX + 20, (pastedShape as Circle).centerY + 20, shapeData.radius)
+                    } else {
+                        addCircle(Color.web(shapeData.lineColor), Color.web(shapeData.fillColor), shapeData.thickness, shapeData.style, shapeData.centerX + 20, shapeData.centerY + 20, shapeData.radius)
+                    }
+                } "rectangle" -> {
+                    pastedShape = if (pastedShape != null && pastedShape is Rectangle) {
+                        addRectangle(Color.web(shapeData.lineColor), Color.web(shapeData.fillColor), shapeData.thickness, shapeData.style, (pastedShape as Rectangle).x + 20, (pastedShape as Rectangle).y + 20, shapeData.width, shapeData.height)
+                    } else {
+                        addRectangle(Color.web(shapeData.lineColor), Color.web(shapeData.fillColor), shapeData.thickness, shapeData.style, shapeData.x + 20, shapeData.y + 20, shapeData.width, shapeData.height)
+                    }
+                }
             }
 
             editAction = "paste"
@@ -299,8 +299,6 @@ class Model (private val stage: Stage) {
 
     // changes state of selected tool
     fun changeTool(tool: String) {
-        println("change tool " + tool)
-        //println("selected tool property change tool " + selectedToolProperty)
         if (selectedTool != tool) {
             if (selectedTool == "select" && currentSelectedShape != null) {
                 isPrevToolSelect = true
@@ -321,8 +319,6 @@ class Model (private val stage: Stage) {
         if (selectedToolProperty[property] != selected) {
             selectedToolProperty[property] = selected
             notifyObservers()
-            println("selected tool property " + selectedToolProperty)
-
         }
     }
 
@@ -332,13 +328,10 @@ class Model (private val stage: Stage) {
 
     // add shapes to global variable to keep track of canvas when canvas gets deleted from preview drawing
     fun addShape(shape: Shape) {
-        //println("add shape effect " + shape.effect)
         shapesOnCanvas.add(shape)
-        //println("camvaseafteraddomg shape " + shapesOnCanvas)
     }
 
     fun eraseShape(shape: Shape, isCompareEffect: Boolean) {
-        //println("hehrheghireng " + (shapesOnCanvas.get(0) == currentSelectedShape))
         removeShapeFromCanvas(shape, isCompareEffect)
         if (currentSelectedShape == shape) {
             currentSelectedShape = null
@@ -409,7 +402,6 @@ class Model (private val stage: Stage) {
     }
 
     fun getFillColour(): Paint {
-        //println("getfillcolour " + selectedToolProperty["fillColour"])
         return Color.web(selectedToolProperty["fillColour"])
     }
 
@@ -437,7 +429,6 @@ class Model (private val stage: Stage) {
 
     fun getColorHexString(linePickerStr: String): String {
         val hexNum = linePickerStr.substring(2, 8)
-        //println("hex num #$hexNum")
         return "#$hexNum"
     }
 
@@ -461,8 +452,6 @@ class Model (private val stage: Stage) {
         selectedToolProperty["fillColour"] = fillColour
         selectedToolProperty["lineThickness"] = lineThickness
         selectedToolProperty["lineStyle"] = lineStyleString
-
-        //println("selecttoolprop " + selectedToolProperty)
     }
 
     fun getSelectedShape(x: Double, y: Double): Shape? {
@@ -473,12 +462,8 @@ class Model (private val stage: Stage) {
 
     fun selectShapeOnPos(x: Double, y: Double) {
         // gp though the shape array on the canvas and
-        println("shape array " + shapesOnCanvas )
-        //println("x " + x + " y " + y)
-
         for (i in shapesOnCanvas.size-1 downTo 0) {
             val shape = shapesOnCanvas[i]
-            println("shapepppeeeee " + shape)
 
             if (shape is Line) {
                 // if x y coordinates in where a line is
@@ -523,11 +508,6 @@ class Model (private val stage: Stage) {
                     (y >= topLeftY) && (y <= topLeftY + height)) {
                     currentSelectedShape = shape
                     if (selectedTool == "select") {
-                        println("GET SELECTED SHAPE ALL SHAPES" + shapesOnCanvas)
-                        println("GET SELECTED SHAPE SELECTED " + currentSelectedShape)
-                        println("GET SELECTED SHAPE TOOL PROPS " + selectedToolProperty)
-                        println("GET SELECTED SHAPE CURRENT SHAPE IN THIS LOOP " + shape)
-
                         setCurrentToolPropertyOfShape(shape)
                     }
                     return
@@ -548,14 +528,12 @@ class Model (private val stage: Stage) {
     }
 
     fun addCircle(lineColor: Paint, fillColor: Paint, lineThickness: Double, lineStyle: List<Double>, centerX: Double, centerY: Double, radius: Double): Circle {
-        //println("release " + centerX + " " + centerY + " " + radius)
         val circle = Circle(centerX, centerY, radius)
         circle.stroke = lineColor
         circle.fill = fillColor
         circle.strokeWidth = lineThickness
         circle.strokeDashArray.addAll(lineStyle)
         addShape(circle)
-        println("cenx " + centerX + " cemy " + centerY + " rad " + radius)
         return circle
     }
 

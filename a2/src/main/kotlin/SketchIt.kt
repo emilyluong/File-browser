@@ -11,7 +11,9 @@ import javafx.stage.Stage
 
 // Sample code used from CS349:
 // MVC2 class repo demo
+// Dragging repo demo
 // Cut-Copy-Paste sample from Widgets slides
+
 class SketchIt : Application() {
 
     override fun start(stage: Stage) {
@@ -43,7 +45,6 @@ class SketchIt : Application() {
         tools.background = Background(BackgroundFill(Color.GRAY, CornerRadii.EMPTY, Insets.EMPTY))
         tools.children.addAll(toolbarView, toolbarOptionsView)
 
-        //TODO fix make canvas scrollable bc the canvas resizes after resizing of window
         val backGroundCanvasView = StackPane(canvasView)
         canvasView.setPrefSize(maxWidthViewPort-toolPrefWidth, maxWidthViewPort)
         canvasView.setMinSize(maxWidthViewPort-toolPrefWidth, maxWidthViewPort)
