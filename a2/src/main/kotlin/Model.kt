@@ -19,6 +19,9 @@ import kotlin.math.pow
 import kotlin.math.sqrt
 import javafx.embed.swing.SwingFXUtils
 import javafx.scene.image.Image
+import javafx.scene.input.Clipboard
+import javafx.scene.input.ClipboardContent
+import javafx.scene.input.DataFormat
 import netscape.javascript.JSObject
 import kotlinx.serialization.*
 import kotlinx.serialization.json.*
@@ -42,6 +45,8 @@ class Model (private val stage: Stage) {
     var isCanvasSaved = false
     var fileToLoad: String? = null
     var isPrevToolSelect = false
+    var editAction: String? = null
+    val clipboard = Clipboard.getSystemClipboard()
 
     init {
         selectedToolProperty["lineColour"] = "#000000"
@@ -129,6 +134,86 @@ class Model (private val stage: Stage) {
         }
     }
 
+    fun addShapeDataToCanvas(jsonShapeData: String) {
+        val shapeDataListObj = Json.decodeFromString<ShapeDataList>(jsonShapeData)
+        val shapeDataList = shapeDataListObj.shapeDataList
+
+        for (shapeData in shapeDataList) {
+
+            when(shapeData.shapeType) {
+                "line" -> {
+                    addLine(Color.web(shapeData.lineColor), shapeData.thickness, shapeData.style, shapeData.startX, shapeData.startY, shapeData.endX, shapeData.endY)
+                } "circle" -> {
+                addCircle(Color.web(shapeData.lineColor), Color.web(shapeData.fillColor), shapeData.thickness, shapeData.style, shapeData.centerX, shapeData.centerY, shapeData.radius)
+            } "rectangle" -> {
+                addRectangle(Color.web(shapeData.lineColor), Color.web(shapeData.fillColor), shapeData.thickness, shapeData.style, shapeData.x, shapeData.y, shapeData.width, shapeData.height)
+            }
+            }
+        }
+    }
+
+    fun getShapeData(shape: Shape): ShapeData? {
+        if (shape is Line) {
+            return ShapeData(
+                "line",
+                getColorHexString(shape.stroke.toString()),
+                getColorHexString(shape.stroke.toString()),
+                shape.strokeWidth,
+                shape.strokeDashArray,
+                shape.startX,
+                shape.startY,
+                shape.endX,
+                shape.endY,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            )
+        } else if (shape is Circle) {
+            return ShapeData(
+                "circle",
+                getColorHexString(shape.stroke.toString()),
+                getColorHexString(shape.fill.toString()),
+                shape.strokeWidth,
+                shape.strokeDashArray,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                shape.centerX,
+                shape.centerY,
+                shape.radius,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            )
+        } else if (shape is Rectangle) {
+            return ShapeData(
+                "rectangle",
+                getColorHexString(shape.stroke.toString()),
+                getColorHexString(shape.fill.toString()),
+                shape.strokeWidth,
+                shape.strokeDashArray,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                shape.x,
+                shape.y,
+                shape.width,
+                shape.height
+            )
+        }
+        return null
+    }
+
     fun saveFile() {
         val fileChooser = FileChooser()
         val file = fileChooser.showSaveDialog(stage)
@@ -137,75 +222,21 @@ class Model (private val stage: Stage) {
 
             val shapeList = ArrayList<ShapeData>()
             for (shape in shapesOnCanvas) {
-                if (shape is Line) {
-                    shapeList.add(ShapeData(
-                        "line",
-                        getColorHexString(shape.stroke.toString()),
-                        getColorHexString(shape.stroke.toString()),
-                        shape.strokeWidth,
-                        shape.strokeDashArray,
-                        shape.startX,
-                        shape.startY,
-                        shape.endX,
-                        shape.endY,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0
-                    ))
-                } else if (shape is Circle) {
-                    shapeList.add(ShapeData(
-                        "circle",
-                        getColorHexString(shape.stroke.toString()),
-                        getColorHexString(shape.fill.toString()),
-                        shape.strokeWidth,
-                        shape.strokeDashArray,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        shape.centerX,
-                        shape.centerY,
-                        shape.radius,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0
-                    ))
-                } else if (shape is Rectangle) {
-                    shapeList.add(ShapeData(
-                        "rectangle",
-                        getColorHexString(shape.stroke.toString()),
-                        getColorHexString(shape.fill.toString()),
-                        shape.strokeWidth,
-                        shape.strokeDashArray,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        shape.x,
-                        shape.y,
-                        shape.width,
-                        shape.height
-                    ))
+                val shapeData = getShapeData(shape)
+                if (shapeData != null) {
+                    shapeList.add(shapeData)
                 }
             }
 
             val jsonShapeList = ShapeDataList(shapeList)
-            val jsonString = Json.encodeToString(jsonShapeList)
+
             try {
+                val jsonString = Json.encodeToString(jsonShapeList)
                 PrintWriter(FileWriter(file)).use { it.write(jsonString) }
                 isCanvasSaved = true
             } catch (e: IOException) {
                 e.printStackTrace()
             }
-
         }
     }
 
@@ -214,6 +245,56 @@ class Model (private val stage: Stage) {
             promptToSave()
         }
         Platform.exit()
+    }
+
+
+    fun cutShape() {
+        copyShape()
+        editAction = "cut"
+        notifyObservers()
+    }
+
+    fun copyShape() {
+        val content = ClipboardContent()
+
+        val shapeData = getShapeData(currentSelectedShape!!)
+
+        var jsonString = ""
+        try {
+            jsonString = Json.encodeToString(shapeData)
+        } catch(e: IOException) {
+            e.printStackTrace()
+        }
+
+        content.putString(jsonString)
+        clipboard.setContent(content)
+    }
+
+    fun pasteShape() {
+        var content = ""
+        if (clipboard.hasContent(DataFormat.PLAIN_TEXT)) {
+            content = clipboard.string
+        }
+
+        try {
+            val shapeData = Json.decodeFromString<ShapeData>(content)
+
+            when(shapeData.shapeType) {
+                "line" -> {
+                    addLine(Color.web(shapeData.lineColor), shapeData.thickness, shapeData.style, shapeData.startX + 20, shapeData.startY + 20, shapeData.endX + 20, shapeData.endY + 20)
+                } "circle" -> {
+                addCircle(Color.web(shapeData.lineColor), Color.web(shapeData.fillColor), shapeData.thickness, shapeData.style, shapeData.centerX + 20, shapeData.centerY + 20, shapeData.radius)
+            } "rectangle" -> {
+                addRectangle(Color.web(shapeData.lineColor), Color.web(shapeData.fillColor), shapeData.thickness, shapeData.style, shapeData.x + 20, shapeData.y + 20, shapeData.width, shapeData.height)
+            }
+            }
+
+            editAction = "paste"
+            notifyObservers()
+
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
     }
 
     // changes state of selected tool
@@ -256,48 +337,69 @@ class Model (private val stage: Stage) {
         //println("camvaseafteraddomg shape " + shapesOnCanvas)
     }
 
-    fun eraseShape(shape: Shape) {
+    fun eraseShape(shape: Shape, isCompareEffect: Boolean) {
         //println("hehrheghireng " + (shapesOnCanvas.get(0) == currentSelectedShape))
-        removeShapeFromCanvas(shape)
+        removeShapeFromCanvas(shape, isCompareEffect)
         if (currentSelectedShape == shape) {
             currentSelectedShape = null
         }
     }
 
-    fun removeShapeFromCanvas(shapeToDelete: Shape) {
+    fun isShapesEqual(shapeA: Shape, shapeB: Shape, isCompareEffect: Boolean): Boolean {
+        fun getLineCond(shape: Line, shapeToDelete: Line): Boolean {
+            return shapeToDelete.stroke == shape.stroke
+                    && shapeToDelete.strokeWidth == shape.strokeWidth && shapeToDelete.strokeDashArray == shape.strokeDashArray
+                    && shapeToDelete.startX == shape.startX && shapeToDelete.startY == shape.startY
+                    && shapeToDelete.endX == shape.endX && shapeToDelete.endY == shape.endY
+        }
+
+        fun getCircleCond(shape: Circle, shapeToDelete: Circle): Boolean {
+            return shapeToDelete.stroke == shape.stroke && shapeToDelete.fill == shape.fill
+                    && shapeToDelete.strokeWidth == shape.strokeWidth && shapeToDelete.strokeDashArray == shape.strokeDashArray
+                    && shapeToDelete.centerX == shape.centerX && shapeToDelete.centerY == shape.centerY
+                    && shapeToDelete.radius == shape.radius
+        }
+
+        fun getRectangleCond(shape: Rectangle, shapeToDelete: Rectangle): Boolean {
+            return shapeToDelete.stroke == shape.stroke && shapeToDelete.fill == shape.fill
+                    && shapeToDelete.strokeWidth == shape.strokeWidth && shapeToDelete.strokeDashArray == shape.strokeDashArray
+                    && shapeToDelete.x == shape.x && shapeToDelete.y == shape.y
+                    && shapeToDelete.width == shape.width && shapeToDelete.height == shape.height
+        }
+
+        if (shapeA is Line && shapeB is Line) {
+            if (isCompareEffect) {
+                return shapeB.effect == shapeA.effect && getLineCond(shapeA, shapeB)
+            } else {
+                return getLineCond(shapeA, shapeB)
+            }
+        } else if (shapeA is Circle && shapeB is Circle) {
+            if (isCompareEffect) {
+                return shapeB.effect == shapeA.effect && getCircleCond(shapeA, shapeB)
+            } else {
+                return getCircleCond(shapeA, shapeB)
+            }
+        } else if (shapeA is Rectangle && shapeB is Rectangle) {
+            if (isCompareEffect) {
+                return shapeB.effect == shapeA.effect && getRectangleCond(shapeA, shapeB)
+            } else {
+                return getRectangleCond(shapeA, shapeB)
+            }
+        }
+        return false
+    }
+
+    fun removeShapeFromCanvas(shapeToDelete: Shape, isCompareEffect: Boolean) {
+
         val updatedShapes = ArrayList<Shape>()
         val currentShapes = shapesOnCanvas
 
         for (i in currentShapes.indices) {
             val shape = currentShapes[i]
-
-            if (shape is Line && shapeToDelete is Line) {
-                if (shapeToDelete.effect == shape.effect && shapeToDelete.stroke == shape.stroke
-                    && shapeToDelete.strokeWidth == shape.strokeWidth && shapeToDelete.strokeDashArray == shape.strokeDashArray
-                    && shapeToDelete.startX == shape.startX && shapeToDelete.startY == shape.startY
-                    && shapeToDelete.endX == shape.endX && shapeToDelete.endY == shape.endY) {
-                    //println("line match")
-                    continue
-                }
-            } else if (shape is Circle && shapeToDelete is Circle) {
-                if (shapeToDelete.effect == shape.effect && shapeToDelete.stroke == shape.stroke && shapeToDelete.fill == shape.fill
-                    && shapeToDelete.strokeWidth == shape.strokeWidth && shapeToDelete.strokeDashArray == shape.strokeDashArray
-                    && shapeToDelete.centerX == shape.centerX && shapeToDelete.centerY == shape.centerY
-                    && shapeToDelete.radius == shape.radius) {
-                    //println("circle match")
-                    continue
-                }
-            } else if (shape is Rectangle && shapeToDelete is Rectangle) {
-                if (shapeToDelete.effect == shape.effect && shapeToDelete.stroke == shape.stroke && shapeToDelete.fill == shape.fill
-                    && shapeToDelete.strokeWidth == shape.strokeWidth && shapeToDelete.strokeDashArray == shape.strokeDashArray
-                    && shapeToDelete.x == shape.x && shapeToDelete.y == shape.y
-                    && shapeToDelete.width == shape.width && shapeToDelete.height == shape.height) {
-                    //println("rect match")
-                    continue
-                }
+            if (isShapesEqual(shape, shapeToDelete, isCompareEffect)) {
+                continue
             }
-
-            updatedShapes.add(currentShapes[i])
+            updatedShapes.add(shape)
         }
         updateShapesOnCanvas(updatedShapes)
     }
@@ -341,7 +443,10 @@ class Model (private val stage: Stage) {
 
     fun setCurrentToolPropertyOfShape(shape: Shape) {
         val lineColour = getColorHexString(shape.stroke.toString())
-        val fillColour = getColorHexString(shape.fill.toString())
+        var fillColour = "#FFFFFF"
+        if (shape is Circle || shape is Rectangle) {
+            fillColour = getColorHexString(shape.fill.toString())
+        }
         val lineThickness = shape.strokeWidth.toString()
         val lineStyle = shape.strokeDashArray
 

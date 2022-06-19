@@ -34,6 +34,28 @@ internal class CanvasView (private val model: Model) : VBox(), IView {
     override fun updateView() {
         println("Canvas View: updateView" + model.shapesOnCanvas)
 
+        if (model.editAction == "paste" || model.editAction == "cut") {
+            println("inside herereee " + (model.currentSelectedShape?.effect ?: "") + " " + model.shapesOnCanvas[0].effect)
+            if (model.currentSelectedShape != null) {
+                println("remove highlight before " + model.shapesOnCanvas)
+
+                removeSelectedHighlightAndRefresh(model.currentSelectedShape!!)
+                println("remove highlight after " + model.shapesOnCanvas)
+
+                if (model.editAction == "cut") {
+                    println("before ereasee " + model.shapesOnCanvas)
+                    model.eraseShape(model.currentSelectedShape!!, false)
+                    println("after ereasee " + model.shapesOnCanvas)
+                }
+
+
+                model.currentSelectedShape = null
+            }
+            gc.clearRect(0.0, 0.0, canvas.width, canvas.height)
+            refreshCanvas()
+            model.editAction = null
+        }
+
         // If there is a file to load
         val jsonShapeData = model.fileToLoad
         if (jsonShapeData != null) {
@@ -43,22 +65,7 @@ internal class CanvasView (private val model: Model) : VBox(), IView {
                 model.currentSelectedShape = null
             }
             model.resetCanvas()
-
-            val shapeDataListObj = Json.decodeFromString<ShapeDataList>(jsonShapeData)
-            val shapeDataList = shapeDataListObj.shapeDataList
-
-            for (shapeData in shapeDataList) {
-
-                when(shapeData.shapeType) {
-                    "line" -> {
-                        model.addLine(Color.web(shapeData.lineColor), shapeData.thickness, shapeData.style, shapeData.startX, shapeData.startY, shapeData.endX, shapeData.endY)
-                    } "circle" -> {
-                        model.addCircle(Color.web(shapeData.lineColor), Color.web(shapeData.fillColor), shapeData.thickness, shapeData.style, shapeData.centerX, shapeData.centerY, shapeData.radius)
-                    } "rectangle" -> {
-                        model.addRectangle(Color.web(shapeData.lineColor), Color.web(shapeData.fillColor), shapeData.thickness, shapeData.style, shapeData.x, shapeData.y, shapeData.width, shapeData.height)
-                    }
-                }
-            }
+            model.addShapeDataToCanvas(jsonShapeData)
 
             refreshCanvas()
 
@@ -79,14 +86,14 @@ internal class CanvasView (private val model: Model) : VBox(), IView {
             when (val shape = model.currentSelectedShape) {
                 is Line -> {
                     val line = model.addLine(model.getLineColour(), model.getLineThickness(), model.getLineStyle(), shape.startX, shape.startY, shape.endX, shape.endY)
-                    model.removeShapeFromCanvas(shape)
+                    model.removeShapeFromCanvas(shape, true)
                     model.currentSelectedShape = line
                     gc.clearRect(0.0, 0.0, canvas.width, canvas.height)
                     refreshCanvas()
                 }
                 is Circle -> {
                     val circle = model.addCircle(model.getLineColour(), model.getFillColour(), model.getLineThickness(), model.getLineStyle(), shape.centerX, shape.centerY, shape.radius)
-                    model.removeShapeFromCanvas(shape)
+                    model.removeShapeFromCanvas(shape, true)
                     model.currentSelectedShape = circle
                     gc.clearRect(0.0, 0.0, canvas.width, canvas.height)
                     refreshCanvas()
@@ -94,7 +101,7 @@ internal class CanvasView (private val model: Model) : VBox(), IView {
                 is Rectangle -> {
                     println("fill nfrenfkl " + model.getFillColour())
                     val rectangle = model.addRectangle(model.getLineColour(), model.getFillColour(), model.getLineThickness(), model.getLineStyle(), shape.x, shape.y, shape.width, shape.height)
-                    model.removeShapeFromCanvas(shape)
+                    model.removeShapeFromCanvas(shape, true)
                     model.currentSelectedShape = rectangle
                     gc.clearRect(0.0, 0.0, canvas.width, canvas.height)
                     refreshCanvas()
@@ -142,7 +149,7 @@ internal class CanvasView (private val model: Model) : VBox(), IView {
     }
 
     fun removeSelectedHighlightAndRefresh(shape: Shape) {
-        model.removeShapeFromCanvas(shape)
+        model.removeShapeFromCanvas(shape, true)
 
         when(shape) {
             is Line -> {
@@ -161,7 +168,7 @@ internal class CanvasView (private val model: Model) : VBox(), IView {
 
     fun showSelectedHighlight(shape: Shape) {
         //println("shape hightlight " + shape)
-        model.removeShapeFromCanvas(shape)
+        model.removeShapeFromCanvas(shape, true)
         shape.effect = DropShadow(shape.strokeWidth + 4.0, Color.BLUE)
         model.shapesOnCanvas.add(shape)
         gc.clearRect(0.0, 0.0, canvas.width, canvas.height)
@@ -237,7 +244,7 @@ internal class CanvasView (private val model: Model) : VBox(), IView {
                 println("eraseee inside " + selectedShape)
 
                 if (selectedShape != null) {
-                    model.eraseShape(selectedShape)
+                    model.eraseShape(selectedShape, true)
                 }
                 gc.clearRect(0.0, 0.0, canvas.width, canvas.height)
                 refreshCanvas()
@@ -245,7 +252,7 @@ internal class CanvasView (private val model: Model) : VBox(), IView {
                 val selectedShape = model.getSelectedShape(it.x, it.y)
 
                 if (selectedShape != null) {
-                    model.removeShapeFromCanvas(selectedShape)
+                    model.removeShapeFromCanvas(selectedShape, true)
 
                     selectedShape.fill = model.getFillColour()
                     model.currentSelectedShape = selectedShape

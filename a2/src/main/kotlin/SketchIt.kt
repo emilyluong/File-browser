@@ -9,9 +9,9 @@ import javafx.scene.paint.Color
 import javafx.stage.Stage
 
 
-// MVC with coupled View and Controller (a more typical method than MVC1)
-// A simple MVC example inspired by Joseph Mack, http://www.austintek.com/mvc/
-// This version uses MVC: two views coordinated with the observer pattern, but no separate controller.
+// Sample code used from CS349:
+// MVC2 class repo demo
+// Cut-Copy-Paste sample from Widgets slides
 class SketchIt : Application() {
 
     override fun start(stage: Stage) {
@@ -83,7 +83,7 @@ class SketchIt : Application() {
                     (it.code == KeyCode.BACK_SPACE || it.code == KeyCode.DELETE)) {
 
                     canvasView.gc.setEffect(null)
-                    model.eraseShape(selectedShape)
+                    model.eraseShape(selectedShape, true)
                     canvasView.gc.clearRect(0.0, 0.0, canvasView.width, canvasView.height)
                     canvasView.refreshCanvas()
                     model.notifyObservers()

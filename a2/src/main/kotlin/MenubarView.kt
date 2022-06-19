@@ -1,21 +1,49 @@
 import javafx.scene.control.*
+import javafx.scene.input.Clipboard
+import javafx.scene.input.ClipboardContent
+import javafx.scene.input.DataFormat
 import javafx.scene.layout.VBox
 import javafx.stage.FileChooser
 import jdk.jfr.consumer.EventStream.openFile
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import java.io.IOException
+import javax.print.DocFlavor.STRING
 
 
 internal class MenubarView (private val model: Model) : VBox(), IView {
 
     private val menubar = MenuBar()
 
-    // When notified by the model that things have changed,
-    // update to display the new value
-    override fun updateView() {
-        println("MenubarView: updateView")
+    fun setEditMenu(isDisabled: Boolean): Menu {
+        val edit = Menu("Edit")
+
+        val cutEdit = MenuItem("Cut")
+        cutEdit.setOnAction {
+            model.cutShape()
+        }
+        cutEdit.isDisable = isDisabled
+
+        val copyEdit = MenuItem("Copy")
+        copyEdit.setOnAction {
+            model.copyShape()
+        }
+        copyEdit.isDisable = isDisabled
+
+        val pasteEdit = MenuItem("Paste")
+        pasteEdit.setOnAction {
+            model.pasteShape()
+        }
+        if (!model.clipboard.hasContent(DataFormat.PLAIN_TEXT)) {
+            pasteEdit.isDisable = isDisabled
+        }
+
+        edit.items.addAll(cutEdit, copyEdit, pasteEdit)
+        return edit
     }
 
-    init {
-
+    fun setFileMenu(): Menu {
         val file = Menu("File")
         val newFile = MenuItem("New")
         newFile.setOnAction {
@@ -35,7 +63,10 @@ internal class MenubarView (private val model: Model) : VBox(), IView {
         }
 
         file.items.addAll(newFile, loadFile, saveFile, quitFile)
+        return file
+    }
 
+    fun setHelpMenu(): Menu {
         val help = Menu("Help")
         val aboutHelp = MenuItem("About")
         aboutHelp.setOnAction {
@@ -47,8 +78,37 @@ internal class MenubarView (private val model: Model) : VBox(), IView {
         }
 
         help.items.add(aboutHelp)
+        return help
+    }
 
-        menubar.menus.addAll(file, help)
+    // When notified by the model that things have changed,
+    // update to display the new value
+    override fun updateView() {
+        println("MenubarView: updateView")
+        val file: Menu
+        val edit: Menu
+        val help: Menu
+
+        if (model.currentSelectedShape == null) {
+            file = setFileMenu()
+            edit = setEditMenu(true)
+            help = setHelpMenu()
+        } else {
+            file = setFileMenu()
+            edit = setEditMenu(false)
+            help = setHelpMenu()
+        }
+        menubar.menus.remove(0, menubar.menus.size)
+        menubar.menus.addAll(file, edit, help)
+    }
+
+    init {
+
+        val file = setFileMenu()
+        val edit = setEditMenu(false)
+        val help = setHelpMenu()
+
+        menubar.menus.addAll(file, edit, help)
 
         // add menubar widget to the pane
         children.add(menubar)
