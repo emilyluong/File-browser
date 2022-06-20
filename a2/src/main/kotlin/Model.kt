@@ -263,6 +263,8 @@ class Model (private val stage: Stage) {
         var content = ""
         if (clipboard.hasContent(DataFormat.PLAIN_TEXT)) {
             content = clipboard.string
+        } else {
+            return
         }
 
         try {

@@ -1,9 +1,12 @@
 import javafx.application.Application
 import javafx.beans.value.ChangeListener
+import javafx.event.EventHandler
 import javafx.geometry.Insets
 import javafx.scene.Scene
 import javafx.scene.control.ScrollPane
 import javafx.scene.input.KeyCode
+import javafx.scene.input.KeyCodeCombination
+import javafx.scene.input.KeyEvent
 import javafx.scene.layout.*
 import javafx.scene.paint.Color
 import javafx.stage.Stage
@@ -80,22 +83,38 @@ class SketchIt : Application() {
             scene.setOnKeyPressed {
                 println(model.selectedTool + " " + model.currentSelectedShape + " " + it.code)
                 val selectedShape = model.currentSelectedShape
-                if (model.selectedTool == "select" && selectedShape != null &&
-                    (it.code == KeyCode.BACK_SPACE || it.code == KeyCode.DELETE)) {
-
+                if (model.selectedTool == "select" && selectedShape != null && (it.code == KeyCode.BACK_SPACE || it.code == KeyCode.DELETE)) {
                     canvasView.gc.setEffect(null)
                     model.eraseShape(selectedShape, true)
                     canvasView.gc.clearRect(0.0, 0.0, canvasView.width, canvasView.height)
                     canvasView.refreshCanvas()
                     model.notifyObservers()
-                } else if (model.selectedTool == "select" && selectedShape != null &&
-                    it.code == KeyCode.ESCAPE) {
-
+                } else if (model.selectedTool == "select" && selectedShape != null && it.code == KeyCode.ESCAPE) {
                     canvasView.removeSelectedHighlightAndRefresh(selectedShape)
                     model.currentSelectedShape = null
                     model.notifyObservers()
                 }
 
+                val keyCombCopyMac = KeyCodeCombination(KeyCode.C, KeyCodeCombination.META_DOWN)
+                val keyCombCopyWin = KeyCodeCombination(KeyCode.C, KeyCodeCombination.CONTROL_DOWN)
+                if ((keyCombCopyMac.match(it) || keyCombCopyWin.match(it)) && model.selectedTool == "select" && selectedShape != null) {
+                    model.copyShape()
+                    it.consume()
+                }
+
+                val keyCombPasteMac = KeyCodeCombination(KeyCode.V, KeyCodeCombination.META_DOWN)
+                val keyCombPasteWin = KeyCodeCombination(KeyCode.V, KeyCodeCombination.CONTROL_DOWN)
+                if (keyCombPasteMac.match(it) || keyCombPasteWin.match(it)) {
+                    model.pasteShape()
+                    it.consume()
+                }
+
+                val keyCombCutMac = KeyCodeCombination(KeyCode.X, KeyCodeCombination.META_DOWN)
+                val keyCombCutWin = KeyCodeCombination(KeyCode.X, KeyCodeCombination.CONTROL_DOWN)
+                if ((keyCombCutMac.match(it) || keyCombCutWin.match(it)) && model.selectedTool == "select" && selectedShape != null) {
+                    model.cutShape()
+                    it.consume()
+                }
             }
         }
         stage.widthProperty().addListener(stageSizeListener())
