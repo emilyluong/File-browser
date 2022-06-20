@@ -43,6 +43,7 @@ class Model (private val stage: Stage) {
     var editAction: String? = null
     val clipboard = Clipboard.getSystemClipboard()
     var pastedShape: Shape? = null
+    var isToolChanged = false
 
     init {
         selectedToolProperty["lineColour"] = "#000000"
@@ -300,6 +301,7 @@ class Model (private val stage: Stage) {
     // changes state of selected tool
     fun changeTool(tool: String) {
         if (selectedTool != tool) {
+            isToolChanged = true
             if (selectedTool == "select" && currentSelectedShape != null) {
                 isPrevToolSelect = true
                 // for dehighlighting after choosing another tool
@@ -311,6 +313,7 @@ class Model (private val stage: Stage) {
                 // for disabling/enabling tool property option
                 notifyObservers()
             }
+            isToolChanged = false
         }
     }
 
