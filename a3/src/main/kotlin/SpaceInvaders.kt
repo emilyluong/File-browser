@@ -5,8 +5,6 @@ import javafx.application.Application
 import javafx.application.Platform
 import javafx.event.EventHandler
 import javafx.geometry.Pos
-import javafx.geometry.VPos
-import javafx.scene.Group
 import javafx.scene.Scene
 import javafx.scene.canvas.Canvas
 import javafx.scene.canvas.GraphicsContext
@@ -15,7 +13,6 @@ import javafx.scene.image.ImageView
 import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyEvent
 import javafx.scene.layout.*
-import javafx.scene.media.AudioClip
 import javafx.scene.media.Media
 import javafx.scene.media.MediaPlayer
 import javafx.scene.paint.Color
@@ -26,14 +23,10 @@ import javafx.scene.text.TextAlignment
 import javafx.stage.Stage
 import javafx.util.Duration
 import java.io.File
+import kotlin.properties.Delegates
 import kotlin.random.Random
 
 class SpaceInvaders: Application()  {
-
-    var homeScene: Scene? = null
-    var level1Sceme: Scene? = null
-    var level2Sceme: Scene? = null
-    var level3Sceme: Scene? = null
 
     enum class SCENES {
         HOMESCENE,
@@ -79,10 +72,24 @@ class SpaceInvaders: Application()  {
     var enemyFireCoolDownInterval = 8000
     var lastTimeEnemyFired = System.currentTimeMillis()
 
+    val canvas = Canvas(screenWidth, screenHeight)
+    val gc = canvas.graphicsContext2D
+    var timer: Timeline? = null
+
+    var currentScene: String by Delegates.observable(SCENES.HOMESCENE.toString()) { property, oldValue, newValue ->
+        if (newValue == SCENES.HOMESCENE.toString()) {
+            timer!!.stop()
+        } else {
+            timer!!.play()
+        }
+    }
 
     override fun start(stage: Stage) {
         // window name
         stage.title = this.javaClass.name
+
+        timer = Timeline(KeyFrame(Duration.millis(1000.0/60), { runGame(gc, stage) }))
+        timer!!.cycleCount = Animation.INDEFINITE
 
         setScene(stage, SCENES.HOMESCENE)
         stage.isResizable = false
@@ -100,6 +107,8 @@ class SpaceInvaders: Application()  {
     }
 
     fun setHomeScene(stage: Stage): Scene {
+        currentScene = SCENES.HOMESCENE.toString()
+
         val homeSceneGrid = GridPane()
         homeSceneGrid.alignment = Pos.CENTER
         val homeVBox = setHomeUI()
@@ -154,48 +163,47 @@ class SpaceInvaders: Application()  {
     }
 
     fun setLevel1Scene(stage: Stage): Scene {
-        ENEMY_SPEED = 0.05
+        currentScene = SCENES.LEVEL1.toString()
+
+        ENEMY_SPEED = 0.10
         ENEMY_BULLET_SPEED = 1.0
-        SPEED_INCREASE = 0.02
+        SPEED_INCREASE = 0.03
         enemyFireCoolDownInterval = 8000
 
         return setGame(stage)
     }
 
     fun setLevel2Scene(stage: Stage): Scene {
-        ENEMY_SPEED = 0.10
+        currentScene = SCENES.LEVEL2.toString()
+
+        ENEMY_SPEED = 0.15
         ENEMY_BULLET_SPEED = 2.0
-        SPEED_INCREASE = 0.04
-        enemyFireCoolDownInterval = 6000
+        SPEED_INCREASE = 0.06
+        enemyFireCoolDownInterval = 5000
 
         return setGame(stage)
     }
 
     fun setLevel3Scene(stage: Stage): Scene {
-        ENEMY_SPEED = 0.15
+        currentScene = SCENES.LEVEL3.toString()
+
+        ENEMY_SPEED = 0.20
         ENEMY_BULLET_SPEED = 3.0
-        SPEED_INCREASE = 0.06
-        enemyFireCoolDownInterval = 4000
+        SPEED_INCREASE = 0.09
+        enemyFireCoolDownInterval = 3000
 
         return setGame(stage)
     }
 
     fun setGame(stage: Stage): Scene {
-        val canvas = Canvas(screenWidth, screenHeight)
-        val gc = canvas.graphicsContext2D
-        clearCanvas(gc)
-
-        setGameLabels(gc)
+        clearCanvas()
+        setGameLabels()
 
         // set up player and enemies
         player.playerSpeed = PLAYER_SPEED
         println("PLAYER SPEED " + player.playerSpeed + " PLAYER BULLET " + PLAYER_BULLET_SPEED)
         player.draw(gc)
-        spawnEnemies(gc)
-
-        val timer = Timeline(KeyFrame(Duration.millis(1000.0/60), { _ -> runGame(gc, stage) }))
-        timer.cycleCount = Animation.INDEFINITE
-        timer.play()
+        spawnEnemies()
 
         val pane = Pane(canvas)
 
@@ -214,14 +222,14 @@ class SpaceInvaders: Application()  {
                 }
                 KeyCode.ENTER -> {
                     if (isGameOver || isGameSuccessfullyCompleted) {
-                        clearCanvas(gc)
+                        clearCanvas()
                         resetBackToDefault()
                         setScene(stage, SCENES.LEVEL1)
                     }
                 }
                 KeyCode.I -> {
                     if (isGameOver || isGameSuccessfullyCompleted) {
-                        clearCanvas(gc)
+                        clearCanvas()
                         setScene(stage, SCENES.HOMESCENE)
                     }
                 }
@@ -232,14 +240,14 @@ class SpaceInvaders: Application()  {
                 }
                 KeyCode.DIGIT1, KeyCode.NUMPAD1 -> {
                     if (isGameOver || isGameSuccessfullyCompleted) {
-                        clearCanvas(gc)
+                        clearCanvas()
                         resetBackToDefault()
                         setScene(stage, SCENES.LEVEL1)
                     }
                 }
                 KeyCode.DIGIT2, KeyCode.NUMPAD2 -> {
                     if (isGameOver || isGameSuccessfullyCompleted) {
-                        clearCanvas(gc)
+                        clearCanvas()
                         resetBackToDefault()
                         level = 2
                         setScene(stage, SCENES.LEVEL2)
@@ -247,7 +255,7 @@ class SpaceInvaders: Application()  {
                 }
                 KeyCode.DIGIT3, KeyCode.NUMPAD3 -> {
                     if (isGameOver || isGameSuccessfullyCompleted) {
-                        clearCanvas(gc)
+                        clearCanvas()
                         resetBackToDefault()
                         level = 3
                         setScene(stage, SCENES.LEVEL3)
@@ -295,11 +303,12 @@ class SpaceInvaders: Application()  {
     }
 
     fun runGame(gc: GraphicsContext, stage: Stage) {
+
         if (isGameOver) {
-            showGameDonePopup(gc, "GAME OVER!")
+            showGameDonePopup("GAME OVER!")
             return
         } else if (isGameSuccessfullyCompleted) {
-            showGameDonePopup(gc, "GAME COMPLETED!")
+            showGameDonePopup("GAME COMPLETED!")
             return
         }
 
@@ -355,7 +364,7 @@ class SpaceInvaders: Application()  {
         enemyBullets = updatedEnemyBullet
 
         // clears the canvas and updates the bullets and enemies moving on the screen
-        clearCanvas(gc)
+        clearCanvas()
         player.draw(gc)
 
         var moveEnemyDown = false
@@ -386,8 +395,13 @@ class SpaceInvaders: Application()  {
             if (enemyBullet.isCollided(player)) {
                 // if collided with player, delete player and respawn it on random posY and update lives
                 MediaPlayer(Media(File("src/main/resources/sounds/explosion.wav").toURI().toString())).play()
-                handlePlayerCollision(gc)
-                score -= getEnemyBulletScore(enemyBullet)
+                handlePlayerCollision()
+                val updatedScore = score - getEnemyBulletScore(enemyBullet)
+                if (updatedScore < 0) {
+                    score = 0
+                } else {
+                    score = updatedScore
+                }
             } else {
                 updatedEnemyBullets.add(enemyBullet)
             }
@@ -448,7 +462,7 @@ class SpaceInvaders: Application()  {
         }
 
         // re drawing components in the game
-        setGameLabels(gc)
+        setGameLabels()
         for (bullet in playerBullets) {
             bullet.draw(gc)
         }
@@ -457,12 +471,12 @@ class SpaceInvaders: Application()  {
         }
     }
 
-    fun handlePlayerCollision(gc: GraphicsContext) {
+    fun handlePlayerCollision() {
         lives--
         if (lives < 1) {
             isGameOver = true
         }
-        removePlayerFromScreen(gc)
+        removePlayerFromScreen()
         needToSpawnPlayer = true
     }
 
@@ -516,7 +530,7 @@ class SpaceInvaders: Application()  {
 
     }
 
-    fun showGameDonePopup(gc: GraphicsContext, title: String) {
+    fun showGameDonePopup(title: String) {
         gc.fill = Color.WHITE
         gc.fillRoundRect(screenWidth/4, screenHeight/4, screenWidth/4 * 2, screenHeight/4 * 2, 25.0, 25.0)
         gc.fill = Color.BLACK
@@ -574,7 +588,7 @@ class SpaceInvaders: Application()  {
         return 0
     }
 
-    fun spawnEnemies(gc: GraphicsContext) {
+    fun spawnEnemies() {
 
         var currPosX = screenWidth/4 + space
         var currPosY = 80.0 // to account for the labels at the top
@@ -608,15 +622,16 @@ class SpaceInvaders: Application()  {
         enemies = updatedEnemies
     }
 
-    fun removePlayerFromScreen(gc: GraphicsContext) {
+    fun removePlayerFromScreen() {
         gc.clearRect(player.positionX, player.positionY, player.playerImageWidth, player.playerImageHeight)
     }
 
-    fun clearCanvas(gc: GraphicsContext) {
+    fun clearCanvas() {
         gc.clearRect(0.0, 0.0, screenWidth, screenHeight)
     }
 
-    fun setGameLabels(gc: GraphicsContext) {
+    fun setGameLabels() {
+        gc.textAlign = TextAlignment.LEFT;
         gc.fill = Color.WHITE
         gc.font = Font.font("Arial", FontWeight.EXTRA_BOLD, 18.0)
         gc.fillText("SCORE: $score", 40.0, 30.0)
