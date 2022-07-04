@@ -176,8 +176,8 @@ class SpaceInvaders: Application()  {
     fun setLevel2Scene(stage: Stage): Scene {
         currentScene = SCENES.LEVEL2.toString()
 
-        ENEMY_SPEED = 0.20
-        ENEMY_BULLET_SPEED = 2.0
+        ENEMY_SPEED = 0.25
+        ENEMY_BULLET_SPEED = 3.0
         SPEED_INCREASE = 0.08
         enemyFireCoolDownInterval = 4000
 
@@ -187,8 +187,8 @@ class SpaceInvaders: Application()  {
     fun setLevel3Scene(stage: Stage): Scene {
         currentScene = SCENES.LEVEL3.toString()
 
-        ENEMY_SPEED = 0.25
-        ENEMY_BULLET_SPEED = 3.0
+        ENEMY_SPEED = 0.35
+        ENEMY_BULLET_SPEED = 5.0
         SPEED_INCREASE = 0.12
         enemyFireCoolDownInterval = 2000
 
