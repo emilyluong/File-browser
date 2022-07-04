@@ -165,9 +165,9 @@ class SpaceInvaders: Application()  {
     fun setLevel1Scene(stage: Stage): Scene {
         currentScene = SCENES.LEVEL1.toString()
 
-        ENEMY_SPEED = 0.10
+        ENEMY_SPEED = 0.15
         ENEMY_BULLET_SPEED = 1.0
-        SPEED_INCREASE = 0.03
+        SPEED_INCREASE = 0.04
         enemyFireCoolDownInterval = 6000
 
         return setGame(stage)
@@ -176,9 +176,9 @@ class SpaceInvaders: Application()  {
     fun setLevel2Scene(stage: Stage): Scene {
         currentScene = SCENES.LEVEL2.toString()
 
-        ENEMY_SPEED = 0.15
+        ENEMY_SPEED = 0.20
         ENEMY_BULLET_SPEED = 2.0
-        SPEED_INCREASE = 0.06
+        SPEED_INCREASE = 0.08
         enemyFireCoolDownInterval = 4000
 
         return setGame(stage)
@@ -187,9 +187,9 @@ class SpaceInvaders: Application()  {
     fun setLevel3Scene(stage: Stage): Scene {
         currentScene = SCENES.LEVEL3.toString()
 
-        ENEMY_SPEED = 0.20
+        ENEMY_SPEED = 0.25
         ENEMY_BULLET_SPEED = 3.0
-        SPEED_INCREASE = 0.09
+        SPEED_INCREASE = 0.12
         enemyFireCoolDownInterval = 2000
 
         return setGame(stage)
@@ -315,6 +315,8 @@ class SpaceInvaders: Application()  {
         if (totalEnemies == 0 && level < 3) {
             // set next level
             level++
+            playerBullets.clear()
+            enemyBullets.clear()
             setGameLevel(level, stage)
             totalEnemies = 50
             return
