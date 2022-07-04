@@ -168,7 +168,7 @@ class SpaceInvaders: Application()  {
         ENEMY_SPEED = 0.10
         ENEMY_BULLET_SPEED = 1.0
         SPEED_INCREASE = 0.03
-        enemyFireCoolDownInterval = 8000
+        enemyFireCoolDownInterval = 6000
 
         return setGame(stage)
     }
@@ -179,7 +179,7 @@ class SpaceInvaders: Application()  {
         ENEMY_SPEED = 0.15
         ENEMY_BULLET_SPEED = 2.0
         SPEED_INCREASE = 0.06
-        enemyFireCoolDownInterval = 5000
+        enemyFireCoolDownInterval = 4000
 
         return setGame(stage)
     }
@@ -190,7 +190,7 @@ class SpaceInvaders: Application()  {
         ENEMY_SPEED = 0.20
         ENEMY_BULLET_SPEED = 3.0
         SPEED_INCREASE = 0.09
-        enemyFireCoolDownInterval = 3000
+        enemyFireCoolDownInterval = 2000
 
         return setGame(stage)
     }
@@ -201,7 +201,6 @@ class SpaceInvaders: Application()  {
 
         // set up player and enemies
         player.playerSpeed = PLAYER_SPEED
-        println("PLAYER SPEED " + player.playerSpeed + " PLAYER BULLET " + PLAYER_BULLET_SPEED)
         player.draw(gc)
         spawnEnemies()
 
@@ -317,7 +316,7 @@ class SpaceInvaders: Application()  {
             // set next level
             level++
             setGameLevel(level, stage)
-            totalEnemies = 50;
+            totalEnemies = 50
             return
         } else if (totalEnemies == 0 && level == 3) {
             // show pop up that you finished the game
@@ -408,6 +407,12 @@ class SpaceInvaders: Application()  {
         }
         enemyBullets = updatedEnemyBullets
 
+        // handles situations when all enemies (including killed) hits the bottom of the screen
+        if (isEnemyHitBottom(enemies[0][0])) {
+            MediaPlayer(Media(File("src/main/resources/sounds/explosion.wav").toURI().toString())).play()
+            isGameOver = true
+        }
+
         for (row in enemies.indices) {
             for (enemy in enemies[row]) {
                 // moving enemy to the left or right
@@ -422,20 +427,10 @@ class SpaceInvaders: Application()  {
                     enemy.moveEnemyDown(gc)
                 }
 
-                // handles situations when enemy hits the bottom of the screen
-                if (isEnemyHitBottom(enemy)) {
-                    MediaPlayer(Media(File("src/main/resources/sounds/explosion.wav").toURI().toString())).play()
-                    isGameOver = true
-                    break
-                }
-
                 // handle situation when enemy hits the player
                 if (player.isCollided(enemy) && !enemy.isKilled) {
                     MediaPlayer(Media(File("src/main/resources/sounds/explosion.wav").toURI().toString())).play()
-                    lives--
-                    if (lives < 1) {
-                        isGameOver = true
-                    }
+                    handlePlayerCollision()
                 }
 
                 // update the bullets to handle collision with an enemy
@@ -483,7 +478,7 @@ class SpaceInvaders: Application()  {
     fun isEnemyHitBottom(enemy: Enemy): Boolean {
         // check the last row (not necessarily the last row bc player could've killed last rows
         val enemyBottomPosY = enemy.positionY + enemy.enemyImageHeight
-        return enemyBottomPosY > screenHeight && !enemy.isKilled
+        return enemyBottomPosY > screenHeight
     }
 
     fun increaseEnemySpeed() {
